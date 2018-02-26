@@ -49,10 +49,15 @@ stop-service docker
 dockerd --unregister-service
 dockerd --register-service -H npipe:// -H 0.0.0.0:2375
 start-service docker
-#New-NetFirewallRule -Name "Dockerinsecure2375" -DisplayName "Docker insecure on TCP/2375" -Protocol tcp -LocalPort 2375 -Action Allow -Enabled True
+New-NetFirewallRule -Name "Dockerinsecure2375" -DisplayName "Docker insecure on TCP/2375" -Protocol tcp -LocalPort 2375 -Action Allow -Enabled True
 ```
 
-These steps configure the Docker daemon to accept requests on TCP 2375. Now let´s configure Traefik to support the TCP socket configuration:
+These steps configure:
+
+* the Docker daemon to accept requests on TCP 2375
+* it also allows Requests to that TCP endpoint through the Windows Server firewall 
+
+Now let´s configure Traefik to support the TCP socket configuration. First, we need to get the `Ethernet adapter vEthernet (HNS Internal NIC)` IPv4 adress. Therefore type `ipconfig` and extract it (thanks for [the hint, Stefan!](https://github.com/StefanScherer/dockerfiles-windows/blob/master/traefik/docker-compose.yml)). Then edit the following configuration:
 
 ```
 version: '3.4'
@@ -60,7 +65,7 @@ version: '3.4'
 services:
   proxy:
     image: stefanscherer/traefik-windows
-    command: --web --docker --logLevel=WARN --docker.endpoint=tcp://localhost:2375
+    command: --web --docker --logLevel=WARN --docker.endpoint=tcp://YourHNSInternatNICIPv4Adress:2375
     networks:
       - default
     ports:
@@ -70,12 +75,18 @@ services:
       - .:C:/etc/traefik
     restart:
       always
-
     logging:
       driver: "json-file"
       options:
         max-size: "500m"
         max-file: "3"
+
+  whoami1:
+    image: stefanscherer/whoami-windows
+    labels:
+      - "traefik.backend=whoami"
+      - "traefik.frontend.entryPoints=https"
+      - "traefik.frontend.rule=Host:whoami.yourdomain.com"
 
 networks:
   default:
