@@ -12,15 +12,13 @@ version: '3.4'
 services:
   proxy:
     image: stefanscherer/traefik-windows
-    command: --web --docker --logLevel=WARN --docker.endpoint=npipe:////./pipe/docker_engine
-    #command: --web --docker --logLevel=WARN --docker.endpoint=\\.\pipe\docker_engine
+    command: --api --docker --logLevel=WARN --docker.endpoint=npipe:////./pipe/docker_engine
     networks:
       - default
     ports:
       - "80:80"
       - "8080:8080"
     volumes:
-      #- //./pipe/docker_engine://./pipe/docker_engine
       - \\.\pipe\docker_engine:\\.\pipe\docker_engine
     restart:
       always
@@ -65,7 +63,7 @@ version: '3.4'
 services:
   proxy:
     image: stefanscherer/traefik-windows
-    command: --web --docker --logLevel=WARN --docker.endpoint=tcp://YourHNSInternatNICIPv4Adress:2375
+    command: --api --docker --logLevel=WARN --docker.endpoint=tcp://YourHNSInternatNICIPv4Adress:2375
     networks:
       - default
     ports:
@@ -82,10 +80,9 @@ services:
         max-file: "3"
 
   whoami1:
-    image: stefanscherer/whoami-windows
+    image: stefanscherer/whoami
     labels:
       - "traefik.backend=whoami"
-      - "traefik.frontend.entryPoints=https"
       - "traefik.frontend.rule=Host:whoami.yourdomain.com"
 
 networks:
@@ -94,6 +91,13 @@ networks:
       name: nat
 ```
 
+Now do a `docker-compose up` where your `docker-compose.yml` has been saved. You should get an output like that:
+
+![traefik-and-whoami-running](traefik-and-whoami-running.png)
+
+Now do a `docker inspect nat` on an other Powershell and search for the Docker IP address of Traefik. Paste this IP with 8080 appended into the Browser and you should see the running Traefik webinterface with a `whoami` Docker Compose service registered:
+
+![traefik-webinterface](traefik-webinterface.png)
 
 
 
